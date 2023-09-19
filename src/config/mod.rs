@@ -1,10 +1,17 @@
-use std::{env, ffi::OsString};
-use anyhow::Result;
+mod make;
 
-use clap::{Arg, ArgAction, builder, ArgGroup, value_parser, ValueHint};
+use anyhow::{bail, Context, Result};
+use std::str::FromStr;
+use std::{env, ffi::OsString};
+
+use clap::builder::PossibleValue;
+use clap::{
+    builder, value_parser, Arg, ArgAction, ArgGroup, ArgMatches, FromArgMatches, ValueEnum,
+    ValueHint,
+};
 use config::{ConfigError, Environment, File};
-use serde_derive::Deserialize;
 use log::*;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Qemu {
@@ -17,12 +24,12 @@ impl Qemu {
 
         ret.push(
             Arg::new("qemu-path")
-            .long("qemu-path")
-            .action(ArgAction::Set)
-            .value_name("PATH")
-            .value_hint(ValueHint::ExecutablePath)
-            .default_value(self.path.clone())
-            .hide(true)
+                .long("qemu-path")
+                .action(ArgAction::Set)
+                .value_name("PATH")
+                .value_hint(ValueHint::ExecutablePath)
+                .default_value(self.path.clone())
+                .hide(true),
         );
 
         ret
@@ -30,46 +37,8 @@ impl Qemu {
 
     pub fn group() -> ArgGroup {
         ArgGroup::new("qemu")
-        .args(["qemu-path"])
-        .multiple(true)
-        
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Make {
-    pub path: String,
-    pub jobs: Option<u16>
-}
-
-impl Make {
-    pub fn args(&self) -> Vec<Arg> {
-        let mut ret = Vec::new();
-
-        ret.push(
-            Arg::new("make-path")
-            .long("make-path")
-            .action(ArgAction::Set)
-            .value_name("PATH")
-            .value_hint(ValueHint::ExecutablePath)
-            .default_value(self.path.clone())
-            .hide(true)
-        );
-
-        let jobs = 
-            Arg::new("make-jobs")
-            .short('j')
-            .long("jobs")
-            .value_parser(value_parser!(u16))
-            .value_name("NUM");
-        let jobs = if let Some(num) = self.jobs {
-            jobs.default_value(num.to_string())
-        } else {
-            jobs
-        };
-        ret.push(jobs);
-
-        ret
+            //.args(["qemu-path"])
+            .multiple(true)
     }
 }
 
@@ -84,10 +53,9 @@ pub struct Rt {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub qemu: Qemu,
-    pub make: Make,
+    pub make: make::Make,
     tokio_runtime: Rt,
 }
-
 
 impl Config {
     const EMBED_CONFIG_STR: &'static str = include_str!("config.toml");
@@ -116,7 +84,9 @@ impl Config {
     pub fn build_runtime(&self) -> Result<tokio::runtime::Runtime> {
         use tokio::runtime::Builder;
         let mut builder = Builder::new_multi_thread();
-        builder.enable_all().thread_name(self.tokio_runtime.name.as_str());
+        builder
+            .enable_all()
+            .thread_name(self.tokio_runtime.name.as_str());
 
         if let Some(max_blocking) = self.tokio_runtime.max_blocking {
             builder.max_blocking_threads(max_blocking);

@@ -1,6 +1,7 @@
-use clap::{Arg, Command};
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
+use clap::{Arg, Command, FromArgMatches};
 
+mod commands;
 mod config;
 mod make;
 
@@ -28,9 +29,7 @@ pub fn main() {
     }
 }
 
-async fn async_main(config: config::Config) -> Result<()> {
-    let make_common_args = make::common_args(&config);
-
+async fn async_main(mut config: config::Config) -> Result<()> {
     let app = clap::command!()
         .arg(
             Arg::new("verbose")
@@ -38,26 +37,38 @@ async fn async_main(config: config::Config) -> Result<()> {
                 .long("verbose")
                 .action(clap::ArgAction::Count),
         )
+        .args(config.make.args())
         .group(clap::ArgGroup::new("make-args").multiple(true))
         .subcommand_required(true)
         .subcommand(
-            Command::new("make")
-                .args(&make_common_args)
-                .groups(make::common_groups()),
+            commands::make::command(&config)
         )
         .subcommand(
+            commands::config::command(&config)
+        )
+        /*.subcommand(
             Command::new("config")
                 .args(&make_common_args)
                 .groups(make::common_groups()),
-        );
+        )*/;
 
     let matches = app.get_matches();
 
-    println!("{:?}", matches);
+    config.make.update_from_arg_matches(&matches)?;
+
+    println!("{:?}", matches.get_one::<String>("make-path"));
+    println!("{config:?}");
+    println!("{}", config.make.arch.as_ref().unwrap());
+
+    match matches.subcommand().context("No subcomand provided")? {
+        ("make", matches) => make::make(&config, &matches).await?,
+        ("config", matches) => commands::config::run(&config, &matches).await?,
+        _ => bail!("Unknown subcommand"),
+    };
     Ok(())
 }
 
-/* 
+/*
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     //let cli = Cli::parse();

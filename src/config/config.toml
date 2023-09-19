@@ -3,6 +3,9 @@ path = "qemu"
 
 [make]
 path = "make"
+out_dir = "ktest-out"
+kernel_dir = "."
+extra_make_args = [ "LOCALVERSION=-ktest" ]
 
 [tokio_runtime]
 name = "ktest-async-worker"
