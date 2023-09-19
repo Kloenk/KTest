@@ -15,7 +15,7 @@ pub fn command(_config: &Config) -> clap::Command {
         )
 }
 
-#[tracing::instrument(target = "config", level = "debug", skip(config, matches))]
+#[tracing::instrument(name = "config", level = "debug", skip(config, matches))]
 pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
     new_config(
         config,
@@ -32,12 +32,15 @@ pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
 
     let status = make.cmd.status().await?;
 
-    println!("Exited with status: {}", status);
+    trace!("make ncconfig exited with status: {}", status);
+    if !status.success() {
+        bail!("Failed to run config: {}", status);
+    }
 
     Ok(())
 }
 
-#[tracing::instrument(level = "trace", skip(config), field(make = config.make.path.as_str()))]
+#[tracing::instrument(level = "trace", skip(config), fields(make = config.make.path.as_str()))]
 pub async fn new_config<I, S>(config: &Config, args: I) -> Result<PathBuf>
 where
     I: IntoIterator<Item = S> + core::fmt::Debug,
@@ -47,9 +50,6 @@ where
     config_file.push(".config");
 
     if !config_file.exists() {
-        //let span = debug_span!("Creating new config");
-        //let span = span.enter();
-
         let mut make = MakeCmd::new(config, Some("allnoconfig"), args).await?;
 
         debug!("Running allnoconfig");
@@ -67,7 +67,6 @@ where
             .status()
             .await?;
 
-        //drop(span);
         // TODO: replace all with n
     }
 

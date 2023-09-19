@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::make::MakeCmd;
 use anyhow::{bail, Context, Result};
-use tracing::info_span;
+use tracing::*;
 
 pub fn command(_config: &Config) -> clap::Command {
     clap::Command::new("oldconfig")
@@ -14,11 +14,7 @@ pub fn command(_config: &Config) -> clap::Command {
         )
 }
 
-#[tracing::instrument(
-    target = "subcommand::oldconfig",
-    level = "debug",
-    skip(config, matches)
-)]
+#[tracing::instrument(name = "oldconfig", level = "debug", skip(config, matches))]
 pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
     super::config::new_config(
         config,
@@ -34,8 +30,10 @@ pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
     .await?;
 
     let status = make.cmd.status().await?;
-
-    println!("Exited with status: {}", status);
+    trace!("make oldconfig exited with status: {}", status);
+    if !status.success() {
+        bail!("Failed to run oldconfig: {}", status);
+    }
 
     Ok(())
 }
