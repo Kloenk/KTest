@@ -1,0 +1,8 @@
+[qemu]
+path = "qemu"
+
+[make]
+path = "make"
+
+[tokio_runtime]
+name = "ktest-async-worker"
