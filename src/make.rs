@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::process::Command;
 
 use crate::config::Config;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{value_parser, Arg, ArgAction, ArgGroup, ArgMatches, ValueHint};
 use tracing::*;
 
@@ -13,28 +13,17 @@ pub fn create_jobserver(config: &Config) -> Result<jobserver::Client> {
     jobserver::Client::new(jobs).context("Failed to create jobserver")
 }
 
-pub async fn make(config: &Config, matches: &ArgMatches) -> Result<()> {
-    println!("{matches:?}");
-
-    let mut make = MakeCmd::new(
-        config,
-        None,
-        matches.get_many::<String>("make-args").unwrap(),
-    )
-    .await?;
-
-    make.cmd.status().await?;
-
-    todo!()
-}
-
 pub struct MakeCmd {
     pub cmd: tokio::process::Command,
     pub jobserver: jobserver::Client,
 }
 
 impl MakeCmd {
-    pub async fn new<I, S>(config: &Config, command: Option<&str>, args: I) -> Result<Self>
+    pub async fn new<I, S>(
+        config: &Config,
+        command: Option<&str>,
+        args: I,
+    ) -> Result<Self, crate::err::Error>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -66,5 +55,19 @@ impl MakeCmd {
         cmd.args(args);
 
         Ok(Self { cmd, jobserver })
+    }
+
+    pub async fn run(&mut self) -> Result<(), crate::err::Error> {
+        let status = self.cmd.status().await?;
+
+        if !status.success() {
+            info!("Failed to run command: {}", status);
+            Err(crate::err::Error {
+                anyhow: anyhow!("Failed to run command: {}", status),
+                exit_code: status.code().unwrap_or(1),
+            })
+        } else {
+            Ok(())
+        }
     }
 }

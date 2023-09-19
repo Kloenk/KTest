@@ -14,7 +14,7 @@ pub fn command(_config: &Config) -> clap::Command {
         )
 }
 
-#[tracing::instrument(name = "oldconfig", level = "debug", skip(config, matches))]
+#[instrument(name = "oldconfig", level = "debug", skip(config, matches))]
 pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
     super::config::new_config(
         config,

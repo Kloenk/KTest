@@ -1,8 +1,10 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::{Arg, Command, FromArgMatches};
+use tracing::trace;
 
 mod commands;
 mod config;
+mod err;
 mod make;
 
 /*#[derive(Parser)]
@@ -24,12 +26,14 @@ pub fn main() {
     let rt = config.init().expect("Failed to initialize async runtime");
 
     if let Err(e) = rt.block_on(async move { async_main(config).await }) {
+        trace!("Failed to run ktest: {e:?}");
         eprintln!("Failed to execute ktest:");
         eprint!("{e}");
+        std::process::exit(e.exit_code);
     }
 }
 
-async fn async_main(mut config: config::Config) -> Result<()> {
+async fn async_main(mut config: config::Config) -> Result<(), err::Error> {
     let app = clap::command!()
         .arg(
             Arg::new("verbose")
@@ -40,67 +44,24 @@ async fn async_main(mut config: config::Config) -> Result<()> {
         .args(config.make.args())
         .group(clap::ArgGroup::new("make-args").multiple(true))
         .subcommand_required(true)
-        .subcommand(
-            commands::make::command(&config)
-        )
-        .subcommand(
-            commands::config::command(&config)
-        )
-        .subcommand(
-            commands::oldconfig::command(&config)
-        )
-        /*.subcommand(
-            Command::new("config")
-                .args(&make_common_args)
-                .groups(make::common_groups()),
-        )*/;
+        .subcommand(commands::make::command(&config))
+        .subcommand(commands::config::command(&config))
+        .subcommand(commands::oldconfig::command(&config));
 
     let matches = app.get_matches();
 
-    config.make.update_from_arg_matches(&matches)?;
-
-    println!("{:?}", matches.get_one::<String>("make-path"));
-    println!("{config:?}");
-    println!("{}", config.make.arch.as_ref().unwrap());
+    config
+        .make
+        .update_from_arg_matches(&matches)
+        .context("Failed to parse matches")?;
 
     match matches.subcommand().context("No subcomand provided")? {
-        ("make", matches) => make::make(&config, &matches).await?,
-
+        ("make", matches) => commands::make::run(&config, &matches).await?,
+        //make::make(&config, &matches).await?,
         ("config", matches) => commands::config::run(&config, &matches).await?,
         ("oldconfig", matches) => commands::oldconfig::run(&config, &matches).await?,
 
-        _ => bail!("Unknown subcommand"),
+        _ => return Err(err::Error::anyhow(anyhow!("Unknown subcommand"))),
     };
     Ok(())
 }
-
-/*
-#[tokio::main]
-async fn main() -> std::io::Result<()> {
-    //let cli = Cli::parse();
-    let app = clap::command!()
-        .arg(
-            Arg::new("verbose")
-                .short('v')
-                .long("verbose")
-                .action(clap::ArgAction::Count),
-        )
-        .group(clap::ArgGroup::new("make-args").multiple(true))
-        .subcommand_required(true)
-        .subcommand(
-            Command::new("make")
-                .args(make::common_args())
-                .groups(make::common_groups()),
-        )
-        .subcommand(
-            Command::new("config")
-                .args(make::common_args())
-                .groups(make::common_groups()),
-        );
-
-    let matches = app.get_matches();
-
-    println!("{:?}", matches);
-
-    Ok(())
-}*/

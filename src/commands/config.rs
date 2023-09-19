@@ -41,7 +41,7 @@ pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
 }
 
 #[tracing::instrument(level = "trace", skip(config), fields(make = config.make.path.as_str()))]
-pub async fn new_config<I, S>(config: &Config, args: I) -> Result<PathBuf>
+pub async fn new_config<I, S>(config: &Config, args: I) -> Result<PathBuf, crate::err::Error>
 where
     I: IntoIterator<Item = S> + core::fmt::Debug,
     S: AsRef<std::ffi::OsStr>,
@@ -50,13 +50,11 @@ where
     config_file.push(".config");
 
     if !config_file.exists() {
-        let mut make = MakeCmd::new(config, Some("allnoconfig"), args).await?;
-
         debug!("Running allnoconfig");
-        let status = make.cmd.status().await?;
-        if !status.success() {
-            bail!("Failed to run allnoconfig: {}", status);
-        }
+        MakeCmd::new(config, Some("allnoconfig"), args)
+            .await?
+            .run()
+            .await?;
 
         debug!("Clear full config");
         let cmd = tokio::process::Command::new("sed")
