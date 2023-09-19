@@ -10,8 +10,9 @@ use clap::{
     ValueHint,
 };
 use config::{ConfigError, Environment, File};
-use log::*;
 use serde_derive::{Deserialize, Serialize};
+use tracing::*;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Qemu {
@@ -74,6 +75,11 @@ impl Config {
 
     pub fn init(&self) -> Result<tokio::runtime::Runtime> {
         // TODO: log init
+        let logger = tracing_subscriber::FmtSubscriber::builder()
+            .with_env_filter(EnvFilter::from_default_env());
+        // TODO: parse from config and command line
+
+        logger.init();
 
         let rt = self.build_runtime()?;
         info!("Initialized config");

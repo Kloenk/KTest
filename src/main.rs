@@ -46,6 +46,9 @@ async fn async_main(mut config: config::Config) -> Result<()> {
         .subcommand(
             commands::config::command(&config)
         )
+        .subcommand(
+            commands::oldconfig::command(&config)
+        )
         /*.subcommand(
             Command::new("config")
                 .args(&make_common_args)
@@ -62,7 +65,10 @@ async fn async_main(mut config: config::Config) -> Result<()> {
 
     match matches.subcommand().context("No subcomand provided")? {
         ("make", matches) => make::make(&config, &matches).await?,
+
         ("config", matches) => commands::config::run(&config, &matches).await?,
+        ("oldconfig", matches) => commands::oldconfig::run(&config, &matches).await?,
+
         _ => bail!("Unknown subcommand"),
     };
     Ok(())
