@@ -1,16 +1,9 @@
 mod make;
 
-use anyhow::{bail, Context, Result};
-use std::str::FromStr;
-use std::{env, ffi::OsString};
+use crate::Result;
 
-use clap::builder::PossibleValue;
-use clap::{
-    builder, value_parser, Arg, ArgAction, ArgGroup, ArgMatches, FromArgMatches, ValueEnum,
-    ValueHint,
-};
 use config::{ConfigError, Environment, File};
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::{Deserialize};
 use tracing::*;
 use tracing_subscriber::EnvFilter;
 
@@ -20,7 +13,7 @@ pub struct Qemu {
 }
 
 impl Qemu {
-    pub fn args(&self) -> Vec<Arg> {
+    /*pub fn args(&self) -> Vec<Arg> {
         let mut ret = Vec::new();
 
         ret.push(
@@ -40,7 +33,7 @@ impl Qemu {
         ArgGroup::new("qemu")
             //.args(["qemu-path"])
             .multiple(true)
-    }
+    }*/
 }
 
 #[derive(Debug, Clone, Deserialize)]

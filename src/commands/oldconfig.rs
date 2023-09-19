@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::make::MakeCmd;
-use anyhow::{bail, Context, Result};
+use crate::Result;
 use tracing::*;
 
 pub fn command(_config: &Config) -> clap::Command {
@@ -22,18 +22,14 @@ pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
     )
     .await?;
 
-    let mut make = MakeCmd::new(
+    MakeCmd::new(
         config,
         Some("oldconfig"),
         matches.get_many::<String>("make-args").unwrap_or_default(),
     )
+    .await?
+    .run()
     .await?;
-
-    let status = make.cmd.status().await?;
-    trace!("make oldconfig exited with status: {}", status);
-    if !status.success() {
-        bail!("Failed to run oldconfig: {}", status);
-    }
 
     Ok(())
 }

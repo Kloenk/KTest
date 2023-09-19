@@ -2,8 +2,7 @@ use std::ffi::OsStr;
 use std::process::Command;
 
 use crate::config::Config;
-use anyhow::{anyhow, Context, Result};
-use clap::{value_parser, Arg, ArgAction, ArgGroup, ArgMatches, ValueHint};
+use crate::{Context, Error, Result};
 use tracing::*;
 
 pub fn create_jobserver(config: &Config) -> Result<jobserver::Client> {
@@ -19,11 +18,7 @@ pub struct MakeCmd {
 }
 
 impl MakeCmd {
-    pub async fn new<I, S>(
-        config: &Config,
-        command: Option<&str>,
-        args: I,
-    ) -> Result<Self, crate::err::Error>
+    pub async fn new<I, S>(config: &Config, command: Option<&str>, args: I) -> Result<Self>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -57,15 +52,12 @@ impl MakeCmd {
         Ok(Self { cmd, jobserver })
     }
 
-    pub async fn run(&mut self) -> Result<(), crate::err::Error> {
-        let status = self.cmd.status().await?;
+    pub async fn run(&mut self) -> Result {
+        let status = self.cmd.status().await.context("Error executing make")?;
 
         if !status.success() {
-            info!("Failed to run command: {}", status);
-            Err(crate::err::Error {
-                anyhow: anyhow!("Failed to run command: {}", status),
-                exit_code: status.code().unwrap_or(1),
-            })
+            info!("Failed to run make: {}", status);
+            Err(Error::new("Failed to run command").set_exit_code(status.code()))
         } else {
             Ok(())
         }

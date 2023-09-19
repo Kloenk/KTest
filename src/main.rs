@@ -1,11 +1,12 @@
-use anyhow::{anyhow, bail, Context, Result};
-use clap::{Arg, Command, FromArgMatches};
+use clap::{Arg, FromArgMatches};
 use tracing::trace;
 
 mod commands;
 mod config;
 mod err;
 mod make;
+
+pub use err::{Context, Error, ErrorKind, Result};
 
 /*#[derive(Parser)]
 struct Cli {
@@ -22,18 +23,16 @@ enum Commands {
 }*/
 
 pub fn main() {
-    let mut config = config::Config::new().expect("Failed to read config");
+    let config = config::Config::new().expect("Failed to read config");
     let rt = config.init().expect("Failed to initialize async runtime");
 
     if let Err(e) = rt.block_on(async move { async_main(config).await }) {
         trace!("Failed to run ktest: {e:?}");
-        eprintln!("Failed to execute ktest:");
-        eprint!("{e}");
-        std::process::exit(e.exit_code);
+        e.exit();
     }
 }
 
-async fn async_main(mut config: config::Config) -> Result<(), err::Error> {
+async fn async_main(mut config: config::Config) -> Result {
     let app = clap::command!()
         .arg(
             Arg::new("verbose")
@@ -61,7 +60,7 @@ async fn async_main(mut config: config::Config) -> Result<(), err::Error> {
         ("config", matches) => commands::config::run(&config, &matches).await?,
         ("oldconfig", matches) => commands::oldconfig::run(&config, &matches).await?,
 
-        _ => return Err(err::Error::anyhow(anyhow!("Unknown subcommand"))),
+        _ => return Err(Error::new("Unknown subcommand")),
     };
     Ok(())
 }

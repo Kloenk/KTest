@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::make::MakeCmd;
-use anyhow::{bail, Result};
+use crate::Result;
 use clap::{Arg, Command};
 use tracing::*;
 
@@ -22,7 +22,7 @@ pub fn command(_config: &Config) -> Command {
 }
 
 #[instrument(name = "make", level = "debug", skip(config, matches))]
-pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result<(), crate::err::Error> {
+pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result {
     super::config::new_config(
         config,
         matches.get_many::<String>("make-args").unwrap_or_default(),

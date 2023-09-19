@@ -1,25 +1,69 @@
 use tracing::*;
 
 #[derive(Debug)]
+pub enum ErrorKind {
+    None,
+    Io(std::io::Error),
+    Errno(nix::errno::Errno),
+
+    Clap(clap::Error),
+}
+
+#[derive(Debug)]
 pub struct Error {
-    pub anyhow: anyhow::Error,
-    pub exit_code: i32,
+    pub exit_code: Option<i32>,
+    pub context: String,
+    pub kind: ErrorKind,
 }
 
 impl Error {
-    pub fn anyhow(anyhow: anyhow::Error) -> Self {
+    pub fn new(context: impl Into<String>) -> Self {
         Self {
-            anyhow,
-            exit_code: 1,
+            exit_code: None,
+            context: context.into(),
+            kind: ErrorKind::None,
+        }
+    }
+
+    pub fn set_exit_code(mut self, exit_code: impl Into<Option<i32>>) -> Self {
+        self.exit_code = exit_code.into();
+        self
+    }
+
+    pub fn exit_code(&self) -> i32 {
+        self.exit_code.unwrap_or(1)
+    }
+
+    pub fn exit(&self) -> ! {
+        println!("Failed to run ktest");
+        if !self.context.is_empty() {
+            println!("{}", self.context)
+        }
+        println!("{}", self);
+
+        std::process::exit(self.exit_code())
+    }
+}
+
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match &self.kind {
+            ErrorKind::None => write!(f, "{}", &self.context),
+            ErrorKind::Io(err) => err.fmt(f),
+            ErrorKind::Errno(err) => err.fmt(f),
+            ErrorKind::Clap(err) => err.fmt(f),
         }
     }
 }
 
-impl From<anyhow::Error> for Error {
-    fn from(anyhow: anyhow::Error) -> Self {
-        Self {
-            anyhow,
-            exit_code: 1,
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self {
+                kind: ErrorKind::Io(err),
+                ..
+            } => Some(err),
+            _ => None,
         }
     }
 }
@@ -27,22 +71,67 @@ impl From<anyhow::Error> for Error {
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
         trace!("creating error from std::io::Error: {:?}", value);
-        let exit_code = value.raw_os_error().map(i32::from).unwrap_or(1);
-        let anyhow = anyhow::Error::from(value);
+        let exit_code = value.raw_os_error().map(i32::from);
+        let kind = ErrorKind::Io(value);
 
-        Self { anyhow, exit_code }
+        Self {
+            exit_code,
+            context: String::new(),
+            kind,
+        }
     }
 }
 
-impl core::fmt::Display for Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        self.anyhow.fmt(f)
+impl From<nix::errno::Errno> for Error {
+    fn from(errno: nix::errno::Errno) -> Self {
+        let exit_code = (errno as i32).try_into().ok();
+        let kind = ErrorKind::Errno(errno);
+
+        Self {
+            exit_code,
+            context: String::new(),
+            kind,
+        }
     }
 }
 
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        //Some(&self.anyhow)
-        None
+impl From<clap::Error> for Error {
+    fn from(err: clap::Error) -> Self {
+        let kind = ErrorKind::Clap(err);
+
+        Self {
+            exit_code: None,
+            context: String::new(),
+            kind,
+        }
+    }
+}
+
+pub type Result<T = (), E = Error> = core::result::Result<T, E>;
+
+pub trait Context<T> {
+    fn context(self, context: impl Into<String>) -> Result<T>;
+}
+
+impl<T, E> Context<T> for Result<T, E>
+where
+    E: Into<Error>,
+{
+    fn context(self, context: impl Into<String>) -> Result<T> {
+        self.map_err(|err| {
+            let mut err: Error = err.into();
+            err.context = context.into();
+            err
+        })
+    }
+}
+
+impl<T> Context<T> for Option<T> {
+    fn context(self, context: impl Into<String>) -> Result<T> {
+        self.ok_or_else(|| Error {
+            exit_code: None,
+            context: context.into(),
+            kind: ErrorKind::None,
+        })
     }
 }

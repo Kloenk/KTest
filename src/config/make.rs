@@ -1,8 +1,8 @@
-use anyhow::{bail, Context, Result};
+use crate::{Context, Error, Result};
 use clap::builder::PossibleValue;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, FromArgMatches, ValueEnum, ValueHint};
 use serde_derive::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 pub enum Arch {
@@ -18,12 +18,6 @@ pub enum Arch {
 }
 
 impl Arch {
-    pub fn possible_values() -> impl Iterator<Item = PossibleValue> {
-        Self::value_variants()
-            .iter()
-            .filter_map(ValueEnum::to_possible_value)
-    }
-
     pub fn kernel_arch(&self) -> &'static str {
         match self {
             Self::X86 => "x86",
@@ -49,7 +43,7 @@ impl core::fmt::Display for Arch {
 }
 
 impl std::str::FromStr for Arch {
-    type Err = anyhow::Error;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         for variant in Self::value_variants() {
@@ -57,7 +51,7 @@ impl std::str::FromStr for Arch {
                 return Ok(*variant);
             }
         }
-        bail!("Invalid architecture: {}", s);
+        Err(Error::new(format!("Invalid architecture: {}", s)))
     }
 }
 
@@ -217,7 +211,7 @@ impl FromArgMatches for Make {
         matches: &ArgMatches,
     ) -> Result<Self, clap::error::Error<clap::error::RichFormatter>> {
         tracing::warn!("Creating Make config without reading config");
-        let mut ret = Self {
+        let ret = Self {
             path: matches.get_one::<String>("make-path").unwrap().clone(),
             jobs: Some(Self::jobs_or_default(matches).unwrap()),
             arch: Some(Self::arch_or_default(matches).unwrap()),
