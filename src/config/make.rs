@@ -246,7 +246,7 @@ impl FromArgMatches for Make {
 #[cfg(any(target_os = "android", target_os = "linux"))]
 fn get_nprocs() -> Result<usize> {
     nix::unistd::sysconf(nix::unistd::SysconfVar::_NPROCESSORS_ONLN)
-        .map(|v| v as usize)
+        .map(|v| v.unwrap() as usize)
         .context("Failed to get number of processors online")
 }
 #[cfg(any(target_os = "macos", target_os = "ios"))]

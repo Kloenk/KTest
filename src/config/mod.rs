@@ -3,7 +3,7 @@ mod make;
 use crate::Result;
 
 use config::{ConfigError, Environment, File};
-use serde_derive::{Deserialize};
+use serde_derive::Deserialize;
 use tracing::*;
 use tracing_subscriber::EnvFilter;
 
