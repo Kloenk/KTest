@@ -1,6 +1,7 @@
 use clap::{Arg, FromArgMatches};
 use tracing::trace;
 
+mod boot;
 mod build;
 mod commands;
 mod config;
@@ -46,7 +47,8 @@ fn run_main(mut config: config::Config) -> Result {
         .subcommand(commands::make::command(&config))
         .subcommand(commands::config::command(&config))
         .subcommand(commands::oldconfig::command(&config))
-        .subcommand(commands::build::command(&config));
+        .subcommand(commands::build::command(&config))
+        .subcommand(commands::boot::command(&config));
     let app = config.make.augument_args(app);
 
     let matches = app.get_matches();
@@ -58,11 +60,11 @@ fn run_main(mut config: config::Config) -> Result {
     trace!("Loaded config: {config:?}");
 
     match matches.subcommand().context("No subcomand provided")? {
-        ("make", matches) => commands::make::run(&config, &matches)?,
-        //make::make(&config, &matches).await?,
-        ("config", matches) => commands::config::run(&config, &matches)?,
-        ("oldconfig", matches) => commands::oldconfig::run(&config, &matches)?,
-        ("build", matches) => commands::build::run(&config, &matches)?,
+        ("make", matches) => commands::make::run(&mut config, &matches)?,
+        ("config", matches) => commands::config::run(&mut config, &matches)?,
+        ("oldconfig", matches) => commands::oldconfig::run(&mut config, &matches)?,
+        ("build", matches) => commands::build::run(&mut config, &matches)?,
+        ("boot", matches) => commands::boot::run(&mut config, &matches)?,
 
         _ => return Err(Error::new("Unknown subcommand")),
     };

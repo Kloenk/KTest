@@ -1,5 +1,7 @@
 mod make;
+pub use make::{Arch, Make};
 mod qemu;
+pub use qemu::{Qemu, QemuConfig};
 
 use crate::Result;
 

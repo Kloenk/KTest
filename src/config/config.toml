@@ -3,8 +3,8 @@ path = "make"
 out_dir = "ktest-out"
 kernel_dir = "."
 extra_make_args = [
-    "LOCALVERSION=\"-ktest\"",
-    "DEFAULT_HOSTNAME=\"ktest\""
+    "LOCALVERSION=-ktest",
+    "DEFAULT_HOSTNAME=ktest"
 ]
 
 [make.kconfig]
