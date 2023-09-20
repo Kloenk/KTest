@@ -22,12 +22,11 @@ pub fn command(_config: &Config) -> Command {
 }
 
 #[instrument(name = "make", level = "debug", skip(config, matches))]
-pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result {
+pub fn run(config: &Config, matches: &clap::ArgMatches) -> Result {
     super::config::new_config(
         config,
         matches.get_many::<String>("make-args").unwrap_or_default(),
-    )
-    .await?;
+    )?;
 
     let mut make = MakeCmd::new(
         config,
@@ -35,10 +34,9 @@ pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result {
             .get_one::<String>("make-command")
             .map(|s| s.as_str()),
         matches.get_many::<String>("make-args").unwrap_or_default(),
-    )
-    .await?;
+    )?;
 
-    make.run().await?;
+    make.run()?;
 
     Ok(())
 }

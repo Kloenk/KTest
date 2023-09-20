@@ -37,18 +37,9 @@ impl Qemu {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Rt {
-    pub workers: Option<usize>,
-    pub max_blocking: Option<usize>,
-    pub stack_size: Option<usize>,
-    pub name: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub qemu: Qemu,
     pub make: make::Make,
-    tokio_runtime: Rt,
 }
 
 impl Config {
@@ -66,37 +57,15 @@ impl Config {
         cfg.try_deserialize()
     }
 
-    pub fn init(&self) -> Result<tokio::runtime::Runtime> {
+    pub fn init(&self) -> Result {
         // TODO: log init
         let logger = tracing_subscriber::FmtSubscriber::builder()
             .with_env_filter(EnvFilter::from_default_env());
         // TODO: parse from config and command line
 
         logger.init();
+        info!("Initialized config and logger");
 
-        let rt = self.build_runtime()?;
-        info!("Initialized config");
-
-        Ok(rt)
-    }
-
-    pub fn build_runtime(&self) -> Result<tokio::runtime::Runtime> {
-        use tokio::runtime::Builder;
-        let mut builder = Builder::new_multi_thread();
-        builder
-            .enable_all()
-            .thread_name(self.tokio_runtime.name.as_str());
-
-        if let Some(max_blocking) = self.tokio_runtime.max_blocking {
-            builder.max_blocking_threads(max_blocking);
-        }
-        if let Some(workers) = self.tokio_runtime.workers {
-            builder.worker_threads(workers);
-        }
-        if let Some(stack) = self.tokio_runtime.stack_size {
-            builder.thread_stack_size(stack);
-        }
-
-        Ok(builder.build()?)
+        Ok(())
     }
 }

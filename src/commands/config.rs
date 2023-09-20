@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::make::MakeCmd;
 use crate::Result;
 use std::path::PathBuf;
+use std::process::Command;
 use tracing::*;
 
 pub fn command(_config: &Config) -> clap::Command {
@@ -16,27 +17,24 @@ pub fn command(_config: &Config) -> clap::Command {
 }
 
 #[tracing::instrument(name = "config", level = "debug", skip(config, matches))]
-pub async fn run(config: &Config, matches: &clap::ArgMatches) -> Result {
+pub fn run(config: &Config, matches: &clap::ArgMatches) -> Result {
     new_config(
         config,
         matches.get_many::<String>("make-args").unwrap_or_default(),
-    )
-    .await?;
+    )?;
 
     MakeCmd::new(
         config,
         Some("nconfig"),
         matches.get_many::<String>("make-args").unwrap_or_default(),
-    )
-    .await?
-    .run()
-    .await?;
+    )?
+    .run()?;
 
     Ok(())
 }
 
 #[tracing::instrument(level = "trace", skip(config), fields(make = config.make.path.as_str()))]
-pub async fn new_config<I, S>(config: &Config, args: I) -> Result<PathBuf>
+pub fn new_config<I, S>(config: &Config, args: I) -> Result<PathBuf>
 where
     I: IntoIterator<Item = S> + core::fmt::Debug,
     S: AsRef<std::ffi::OsStr>,
@@ -46,19 +44,15 @@ where
 
     if !config_file.exists() {
         debug!("Running allnoconfig");
-        MakeCmd::new(config, Some("allnoconfig"), args)
-            .await?
-            .run()
-            .await?;
+        MakeCmd::new(config, Some("allnoconfig"), args)?.run()?;
 
         debug!("Clear full config");
-        let status = tokio::process::Command::new("sed")
+        let status = Command::new("sed")
             .arg("-i")
             .arg("-e")
             .arg("s/\\(CONFIG_.*\\)=.*/# \\1 is not set/")
             .arg(config_file.as_os_str())
-            .status()
-            .await?;
+            .status()?;
         trace!("sed status: {}", status);
 
         // TODO: replace all with n

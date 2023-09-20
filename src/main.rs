@@ -24,15 +24,15 @@ enum Commands {
 
 pub fn main() {
     let config = config::Config::new().expect("Failed to read config");
-    let rt = config.init().expect("Failed to initialize async runtime");
+    config.init().expect("Failed to initialize async runtime");
 
-    if let Err(e) = rt.block_on(async move { async_main(config).await }) {
+    if let Err(e) = run_main(config) {
         trace!("Failed to run ktest: {e:?}");
         e.exit();
     }
 }
 
-async fn async_main(mut config: config::Config) -> Result {
+fn run_main(mut config: config::Config) -> Result {
     let app = clap::command!()
         .arg(
             Arg::new("verbose")
@@ -55,10 +55,10 @@ async fn async_main(mut config: config::Config) -> Result {
         .context("Failed to parse matches")?;
 
     match matches.subcommand().context("No subcomand provided")? {
-        ("make", matches) => commands::make::run(&config, &matches).await?,
+        ("make", matches) => commands::make::run(&config, &matches)?,
         //make::make(&config, &matches).await?,
-        ("config", matches) => commands::config::run(&config, &matches).await?,
-        ("oldconfig", matches) => commands::oldconfig::run(&config, &matches).await?,
+        ("config", matches) => commands::config::run(&config, &matches)?,
+        ("oldconfig", matches) => commands::oldconfig::run(&config, &matches)?,
 
         _ => return Err(Error::new("Unknown subcommand")),
     };

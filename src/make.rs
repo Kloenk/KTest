@@ -13,12 +13,12 @@ pub fn create_jobserver(config: &Config) -> Result<jobserver::Client> {
 }
 
 pub struct MakeCmd {
-    pub cmd: tokio::process::Command,
+    pub cmd: Command,
     pub jobserver: jobserver::Client,
 }
 
 impl MakeCmd {
-    pub async fn new<I, S>(config: &Config, command: Option<&str>, args: I) -> Result<Self>
+    pub fn new<I, S>(config: &Config, command: Option<&str>, args: I) -> Result<Self>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -32,7 +32,6 @@ impl MakeCmd {
                 .context("Failed to resolve kernel source directory")?,
         );
         jobserver.configure_make(&mut cmd);
-        let mut cmd = tokio::process::Command::from(cmd);
         cmd.arg(config.make.make_arch_arg());
         cmd.arg(config.make.make_build_dir_arg());
         cmd.arg(format!(
@@ -52,8 +51,8 @@ impl MakeCmd {
         Ok(Self { cmd, jobserver })
     }
 
-    pub async fn run(&mut self) -> Result {
-        let status = self.cmd.status().await.context("Error executing make")?;
+    pub fn run(&mut self) -> Result {
+        let status = self.cmd.status().context("Error executing make")?;
 
         if !status.success() {
             info!("Failed to run make: {}", status);
