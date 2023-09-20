@@ -46,4 +46,12 @@ impl Config {
     pub fn qemu_path(&self) -> Option<&str> {
         self.make.arch.as_ref().map(|a| self.qemu.path(a)).flatten()
     }
+
+    pub fn qemu_args(&self) -> impl Iterator<Item = &str> {
+        self.qemu.qemu_args(&self.make.arch.as_ref().unwrap())
+    }
+
+    pub fn qemu_kernel_args(&self) -> impl Iterator<Item = &str> {
+        self.qemu.kernel_args(&self.make.arch.as_ref().unwrap())
+    }
 }

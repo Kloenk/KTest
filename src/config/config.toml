@@ -9,17 +9,36 @@ extra_make_args = [
 
 [make.kconfig]
 
+[qemu]
+extra_args = [
+    "-nodefaults",
+    "-nographic",
+    "-device", "virtio-serial",
+    "-chardev", "stdio,id=console",
+    "-device", "virtconsole,chardev=console",
+    "-device", "virtio-rng-pci",
+]
+extra_kernel_args = [ "rw", "log_buf_len=8M", "mitigations=off" ]
+
 [qemu.x86]
 path = "qemu-system-x86_64"
+args = [ "-cpu", "host", "-machine", "type=q35,accel=kvm,nvdimm=on" ]
+
+[qemu.x86_64]
+path = "qemu-system-x86_64"
+args = [ "-cpu", "host", "-machine", "type=q35,accel=kvm,nvdimm=on" ]
 
 [qemu.aarch64]
 path = "qemu-system-aarch64"
+args = [ "-cpu", "host", "-machine", "type=virt,accel=kvm,gic-version=max" ]
 
 [qemu.mips]
 path = "qemu-system-mips"
+args = [ "-cpu", "24Kf", "-machine", "malta" ]
 
 [qemu.mips64]
 path = "qemu-system-mips64"
+args = [ "-cpu", "24Kf", "-machine", "malta" ]
 
 [qemu.sparc]
 path = "qemu-system-sparc"

@@ -17,3 +17,4 @@ jobserver = { version = "0.1" }
 tracing = "0.1.37"
 nix = { version = "0.27.1", features = ["feature"] }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+procfs = "0.15.1"

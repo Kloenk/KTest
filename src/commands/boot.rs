@@ -1,3 +1,4 @@
+use crate::boot::QemuCmd;
 use crate::config::Config;
 use crate::Result;
 use clap::FromArgMatches;
@@ -32,6 +33,7 @@ pub fn run(config: &mut Config, matches: &clap::ArgMatches) -> Result {
     trace!("using qemu: {:?}", config.qemu_path());
 
     //crate::boot::boot(config, args)?;
+    QemuCmd::new(config)?.run()?;
 
     Ok(())
 }

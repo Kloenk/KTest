@@ -5,7 +5,7 @@ use clap::{
 };
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::trace;
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq, Hash)]
@@ -194,6 +194,10 @@ impl Make {
                 ])
                 .multiple(true),
         )
+    }
+
+    pub fn out_dir(&self) -> &Path {
+        Path::new(&self.out_dir)
     }
 
     pub fn kernel_bin_dir(&self) -> PathBuf {

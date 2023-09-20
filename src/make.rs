@@ -54,7 +54,10 @@ impl MakeCmd {
     pub fn run(&mut self) -> Result {
         debug!(
             "Running {} {}",
-            self.cmd.get_program().to_str().unwrap_or("foo"),
+            self.cmd
+                .get_program()
+                .to_str()
+                .unwrap_or("**could not find executable**"),
             self.cmd
                 .get_args()
                 .filter_map(|a| a.to_str())
@@ -65,7 +68,7 @@ impl MakeCmd {
 
         if !status.success() {
             info!("Failed to run make: {}", status);
-            Err(Error::new("Failed to run command").set_exit_code(status.code()))
+            Err(Error::new("Failed to run make").set_exit_code(status.code()))
         } else {
             Ok(())
         }
