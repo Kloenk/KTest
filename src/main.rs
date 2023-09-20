@@ -9,21 +9,7 @@ mod err;
 mod kconfig;
 mod make;
 
-pub use err::{Context, Error, ErrorKind, Result};
-
-/*#[derive(Parser)]
-struct Cli {
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    debug: u8,
-}
-
-#[derive(clap::Subcommand)]
-enum Commands {
-    Make {
-        #[command(flattern)]
-        commonargs: make::CommandMakeArgs,
-    }
-}*/
+pub use err::{Context, Error, Result};
 
 pub fn main() {
     let config = config::Config::new().expect("Failed to read config");
@@ -48,7 +34,8 @@ fn run_main(mut config: config::Config) -> Result {
         .subcommand(commands::config::command(&config))
         .subcommand(commands::oldconfig::command(&config))
         .subcommand(commands::build::command(&config))
-        .subcommand(commands::boot::command(&config));
+        .subcommand(commands::boot::command(&config))
+        .subcommand(commands::run::command(&config));
     let app = config.make.augument_args(app);
 
     let matches = app.get_matches();
@@ -65,6 +52,7 @@ fn run_main(mut config: config::Config) -> Result {
         ("oldconfig", matches) => commands::oldconfig::run(&mut config, &matches)?,
         ("build", matches) => commands::build::run(&mut config, &matches)?,
         ("boot", matches) => commands::boot::run(&mut config, &matches)?,
+        ("run", matches) => commands::run::run(&mut config, &matches)?,
 
         _ => return Err(Error::new("Unknown subcommand")),
     };

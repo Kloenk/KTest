@@ -1,4 +1,4 @@
-use std::str::Utf8Error;
+use std::num::ParseIntError;
 use tracing::*;
 
 #[derive(Debug)]
@@ -6,7 +6,7 @@ pub enum ErrorKind {
     None,
     Io(std::io::Error),
     Errno(nix::errno::Errno),
-    Utf8(core::str::Utf8Error),
+    Utf8(std::str::Utf8Error),
 
     Clap(clap::Error),
 }
@@ -100,7 +100,7 @@ impl From<nix::errno::Errno> for Error {
 }
 
 impl From<core::str::Utf8Error> for Error {
-    fn from(value: Utf8Error) -> Self {
+    fn from(value: std::str::Utf8Error) -> Self {
         Self {
             exit_code: None,
             context: String::new(),
@@ -118,6 +118,18 @@ impl From<clap::Error> for Error {
             context: String::new(),
             kind,
         }
+    }
+}
+
+impl From<std::num::ParseIntError> for Error {
+    fn from(value: ParseIntError) -> Self {
+        todo!()
+    }
+}
+
+impl From<core::convert::Infallible> for Error {
+    fn from(_: core::convert::Infallible) -> Self {
+        unreachable!()
     }
 }
 
