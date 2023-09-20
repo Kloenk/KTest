@@ -40,12 +40,11 @@ fn run_main(mut config: config::Config) -> Result {
                 .long("verbose")
                 .action(clap::ArgAction::Count),
         )
-        .args(config.make.args())
-        .group(clap::ArgGroup::new("make-args").multiple(true))
         .subcommand_required(true)
         .subcommand(commands::make::command(&config))
         .subcommand(commands::config::command(&config))
         .subcommand(commands::oldconfig::command(&config));
+    let app = config.make.augument_args(app);
 
     let matches = app.get_matches();
 

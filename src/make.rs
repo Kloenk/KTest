@@ -52,6 +52,15 @@ impl MakeCmd {
     }
 
     pub fn run(&mut self) -> Result {
+        debug!(
+            "Running {} {}",
+            self.cmd.get_program().to_str().unwrap_or("foo"),
+            self.cmd
+                .get_args()
+                .filter_map(|a| a.to_str())
+                .collect::<Vec<_>>()
+                .join(" ")
+        );
         let status = self.cmd.status().context("Error executing make")?;
 
         if !status.success() {

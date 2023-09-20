@@ -1,6 +1,8 @@
 use crate::{Context, Error, Result};
 use clap::builder::PossibleValue;
-use clap::{value_parser, Arg, ArgAction, ArgMatches, FromArgMatches, ValueEnum, ValueHint};
+use clap::{
+    value_parser, Arg, ArgAction, ArgMatches, Command, FromArgMatches, ValueEnum, ValueHint,
+};
 use serde_derive::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -96,10 +98,8 @@ pub struct Make {
 }
 
 impl Make {
-    pub fn args(&self) -> Vec<Arg> {
-        let mut ret = Vec::new();
-
-        ret.push(
+    pub fn augument_args(&self, cmd: Command) -> Command {
+        cmd.arg(
             Arg::new("make-path")
                 .long("make-path")
                 .action(ArgAction::Set)
@@ -108,36 +108,35 @@ impl Make {
                 .default_value(self.path.clone())
                 .hide(true)
                 .global(true),
-        );
-
-        let jobs = Arg::new("make-jobs")
-            .short('j')
-            .long("jobs")
-            .value_parser(value_parser!(usize))
-            .value_name("NUM")
-            .hide_default_value(true)
-            .global(true);
-        let jobs = if let Some(num) = self.jobs {
-            jobs.default_value(num.to_string())
-        } else {
-            jobs
-        };
-        ret.push(jobs);
-
-        let arch = Arg::new("make-arch")
-            .long("arch")
-            .value_name("ARCH")
-            .value_parser(clap::builder::EnumValueParser::<Arch>::new())
-            .global(true)
-            .hide_possible_values(true);
-        let arch = if let Some(def) = self.arch {
-            arch.default_value(def.to_string())
-        } else {
-            arch
-        };
-        ret.push(arch);
-
-        ret.push(
+        )
+        .arg({
+            let jobs = Arg::new("make-jobs")
+                .short('j')
+                .long("jobs")
+                .value_parser(value_parser!(usize))
+                .value_name("NUM")
+                .hide_default_value(true)
+                .global(true);
+            if let Some(num) = self.jobs {
+                jobs.default_value(num.to_string())
+            } else {
+                jobs
+            }
+        })
+        .arg({
+            let arch = Arg::new("make-arch")
+                .long("arch")
+                .value_name("ARCH")
+                .value_parser(clap::builder::EnumValueParser::<Arch>::new())
+                .global(true)
+                .hide_possible_values(true);
+            if let Some(def) = self.arch {
+                arch.default_value(def.to_string())
+            } else {
+                arch
+            }
+        })
+        .arg(
             Arg::new("make-out-dir")
                 .long("out-dir")
                 .short('o')
@@ -146,8 +145,8 @@ impl Make {
                 .value_hint(ValueHint::DirPath)
                 .default_value(self.out_dir.clone())
                 .global(true),
-        );
-        ret.push(
+        )
+        .arg(
             Arg::new("make-kernel-dir")
                 .long("kernel-source")
                 .short('k')
@@ -156,9 +155,18 @@ impl Make {
                 .value_hint(ValueHint::DirPath)
                 .default_value(self.kernel_dir.clone())
                 .global(true),
-        );
-
-        ret
+        )
+        .group(
+            clap::ArgGroup::new("make-args")
+                .args([
+                    "make-path",
+                    "make-jobs",
+                    "make-arch",
+                    "make-out-dir",
+                    "make-kernel-dir",
+                ])
+                .multiple(true),
+        )
     }
 
     pub fn kernel_bin_dir(&self) -> PathBuf {
