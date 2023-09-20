@@ -1,11 +1,34 @@
-[qemu]
-path = "qemu"
-
 [make]
 path = "make"
 out_dir = "ktest-out"
 kernel_dir = "."
-extra_make_args = [ "LOCALVERSION=-ktest" ]
+extra_make_args = [
+    "LOCALVERSION=\"-ktest\"",
+    "DEFAULT_HOSTNAME=\"ktest\""
+]
 
-[tokio_runtime]
-name = "ktest-async-worker"
+[make.kconfig]
+
+[qemu.x86]
+path = "qemu-system-x86_64"
+
+[qemu.aarch64]
+path = "qemu-system-aarch64"
+
+[qemu.mips]
+path = "qemu-system-mips"
+
+[qemu.mips64]
+path = "qemu-system-mips64"
+
+[qemu.sparc]
+path = "qemu-system-sparc"
+
+[qemu.sparc64]
+path = "qemu-system-sparc64"
+
+[qemu.ppc]
+path = "qemu-system-ppc"
+
+[qemu.ppc64]
+path = "qemu-system-ppc64"

@@ -4,9 +4,12 @@ use clap::{
     value_parser, Arg, ArgAction, ArgMatches, Command, FromArgMatches, ValueEnum, ValueHint,
 };
 use serde_derive::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
+use tracing::trace;
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq, Hash)]
+#[serde(try_from = "String")]
 pub enum Arch {
     X86,
     X86_64,
@@ -33,6 +36,13 @@ impl Arch {
             Self::PowerPC64 => "powerpc",
         }
     }
+
+    pub fn make_target(&self) -> Option<&'static str> {
+        match self {
+            Self::Mips => Some("vmlinuz"),
+            _ => None,
+        }
+    }
 }
 
 impl core::fmt::Display for Arch {
@@ -54,6 +64,14 @@ impl std::str::FromStr for Arch {
             }
         }
         Err(Error::new(format!("Invalid architecture: {}", s)))
+    }
+}
+
+impl TryFrom<String> for Arch {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.parse()
     }
 }
 
@@ -95,6 +113,7 @@ pub struct Make {
     pub out_dir: String,
     pub kernel_dir: String,
     pub extra_make_args: Vec<String>,
+    pub kconfig: HashMap<String, String>,
 }
 
 impl Make {
@@ -156,6 +175,14 @@ impl Make {
                 .default_value(self.kernel_dir.clone())
                 .global(true),
         )
+        .arg(
+            Arg::new("make-kconfig")
+                .long("kconfig")
+                .value_name("KCONFIG")
+                .value_parser(value_parser!(String))
+                .action(ArgAction::Append)
+                .global(true),
+        )
         .group(
             clap::ArgGroup::new("make-args")
                 .args([
@@ -195,6 +222,14 @@ impl Make {
         format!("ARCH={}", self.arch.as_ref().unwrap().kernel_arch())
     }
 
+    pub fn make_arch_target(&self) -> Option<&'static str> {
+        if let Some(arch) = self.arch {
+            arch.make_target()
+        } else {
+            None
+        }
+    }
+
     fn jobs_or_default(matches: &ArgMatches) -> Result<usize> {
         let jobs = matches.get_one::<usize>("make-jobs").map(|v| *v);
         if let Some(jobs) = jobs {
@@ -229,6 +264,7 @@ impl FromArgMatches for Make {
                 .unwrap()
                 .clone(),
             extra_make_args: Vec::new(),
+            kconfig: HashMap::new(),
         };
 
         Ok(ret)
@@ -246,6 +282,16 @@ impl FromArgMatches for Make {
             .get_one::<String>("make-kernel-dir")
             .unwrap()
             .clone();
+
+        for arg in matches
+            .get_many::<String>("make-kconfig")
+            .unwrap_or_default()
+        {
+            // TODO: proper error handling
+            let (key, value) = crate::kconfig::parse(arg).expect("Invalid kconfig argument");
+            trace!("inserting cmd line kconfig: {}={}", key, value);
+            self.kconfig.insert(key, value);
+        }
 
         Ok(())
     }

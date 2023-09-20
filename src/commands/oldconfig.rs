@@ -16,7 +16,7 @@ pub fn command(_config: &Config) -> clap::Command {
 
 #[instrument(name = "oldconfig", level = "debug", skip(config, matches))]
 pub fn run(config: &Config, matches: &clap::ArgMatches) -> Result<()> {
-    super::config::new_config(
+    crate::kconfig::new_config(
         config,
         matches.get_many::<String>("make-args").unwrap_or_default(),
     )?;

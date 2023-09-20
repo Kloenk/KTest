@@ -1,3 +1,4 @@
+use std::str::Utf8Error;
 use tracing::*;
 
 #[derive(Debug)]
@@ -5,6 +6,7 @@ pub enum ErrorKind {
     None,
     Io(std::io::Error),
     Errno(nix::errno::Errno),
+    Utf8(core::str::Utf8Error),
 
     Clap(clap::Error),
 }
@@ -51,6 +53,8 @@ impl core::fmt::Display for Error {
             ErrorKind::None => write!(f, "{}", &self.context),
             ErrorKind::Io(err) => err.fmt(f),
             ErrorKind::Errno(err) => err.fmt(f),
+            ErrorKind::Utf8(err) => err.fmt(f),
+
             ErrorKind::Clap(err) => err.fmt(f),
         }
     }
@@ -58,13 +62,13 @@ impl core::fmt::Display for Error {
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self {
-                kind: ErrorKind::Io(err),
-                ..
-            } => Some(err),
-            _ => None,
-        }
+        Some(match &self.kind {
+            ErrorKind::Io(err) => err,
+            ErrorKind::Errno(err) => err,
+            ErrorKind::Utf8(err) => err,
+
+            _ => return None,
+        })
     }
 }
 
@@ -91,6 +95,16 @@ impl From<nix::errno::Errno> for Error {
             exit_code,
             context: String::new(),
             kind,
+        }
+    }
+}
+
+impl From<core::str::Utf8Error> for Error {
+    fn from(value: Utf8Error) -> Self {
+        Self {
+            exit_code: None,
+            context: String::new(),
+            kind: ErrorKind::Utf8(value),
         }
     }
 }

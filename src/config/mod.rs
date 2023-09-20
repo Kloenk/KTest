@@ -1,4 +1,5 @@
 mod make;
+mod qemu;
 
 use crate::Result;
 
@@ -8,37 +9,8 @@ use tracing::*;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Qemu {
-    pub path: String,
-}
-
-impl Qemu {
-    /*pub fn args(&self) -> Vec<Arg> {
-        let mut ret = Vec::new();
-
-        ret.push(
-            Arg::new("qemu-path")
-                .long("qemu-path")
-                .action(ArgAction::Set)
-                .value_name("PATH")
-                .value_hint(ValueHint::ExecutablePath)
-                .default_value(self.path.clone())
-                .hide(true),
-        );
-
-        ret
-    }
-
-    pub fn group() -> ArgGroup {
-        ArgGroup::new("qemu")
-            //.args(["qemu-path"])
-            .multiple(true)
-    }*/
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    pub qemu: Qemu,
+    pub qemu: qemu::Qemu,
     pub make: make::Make,
 }
 
@@ -67,5 +39,9 @@ impl Config {
         info!("Initialized config and logger");
 
         Ok(())
+    }
+
+    pub fn qemu_path(&self) -> Option<&str> {
+        self.make.arch.as_ref().map(|a| self.qemu.path(a)).flatten()
     }
 }

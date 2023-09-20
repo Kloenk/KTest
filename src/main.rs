@@ -1,9 +1,11 @@
 use clap::{Arg, FromArgMatches};
 use tracing::trace;
 
+mod build;
 mod commands;
 mod config;
 mod err;
+mod kconfig;
 mod make;
 
 pub use err::{Context, Error, ErrorKind, Result};
@@ -43,7 +45,8 @@ fn run_main(mut config: config::Config) -> Result {
         .subcommand_required(true)
         .subcommand(commands::make::command(&config))
         .subcommand(commands::config::command(&config))
-        .subcommand(commands::oldconfig::command(&config));
+        .subcommand(commands::oldconfig::command(&config))
+        .subcommand(commands::build::command(&config));
     let app = config.make.augument_args(app);
 
     let matches = app.get_matches();
@@ -52,12 +55,14 @@ fn run_main(mut config: config::Config) -> Result {
         .make
         .update_from_arg_matches(&matches)
         .context("Failed to parse matches")?;
+    trace!("Loaded config: {config:?}");
 
     match matches.subcommand().context("No subcomand provided")? {
         ("make", matches) => commands::make::run(&config, &matches)?,
         //make::make(&config, &matches).await?,
         ("config", matches) => commands::config::run(&config, &matches)?,
         ("oldconfig", matches) => commands::oldconfig::run(&config, &matches)?,
+        ("build", matches) => commands::build::run(&config, &matches)?,
 
         _ => return Err(Error::new("Unknown subcommand")),
     };
