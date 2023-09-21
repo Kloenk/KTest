@@ -15,18 +15,22 @@
       in {
         formatter = pkgs.nixfmt;
 
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs;
-            [
-            rust-bin.nightly.latest.default
-            gnumake
-            ]
-            ++ pkgs.lib.optional pkgs.stdenv.isDarwin pkgs.libiconv;
+        devShells = {
+          default = pkgs.mkShell {
+            buildInputs = with pkgs;
+              [
+              rust-bin.nightly.latest.default
+              gnumake
+              ]
+              ++ pkgs.lib.optional pkgs.stdenv.isDarwin pkgs.libiconv;
 
-          shellHook = ''
-            alias ls=exa
-            alias find=fd
-          '';
+            shellHook = ''
+              alias ls=exa
+              alias find=fd
+            '';
+          };
+          ktest_clang = null;
+          ktest_gcc = null;
         };
       });
 }
