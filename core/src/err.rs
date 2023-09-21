@@ -1,4 +1,3 @@
-use std::num::ParseIntError;
 use tracing::*;
 
 #[derive(Debug)]
@@ -7,6 +6,7 @@ pub enum ErrorKind {
     Io(std::io::Error),
     Errno(nix::errno::Errno),
     Utf8(std::str::Utf8Error),
+    ParseInt(std::num::ParseIntError),
 
     Clap(clap::Error),
 }
@@ -54,6 +54,7 @@ impl core::fmt::Display for Error {
             ErrorKind::Io(err) => err.fmt(f),
             ErrorKind::Errno(err) => err.fmt(f),
             ErrorKind::Utf8(err) => err.fmt(f),
+            ErrorKind::ParseInt(err) => err.fmt(f),
 
             ErrorKind::Clap(err) => err.fmt(f),
         }
@@ -66,6 +67,7 @@ impl std::error::Error for Error {
             ErrorKind::Io(err) => err,
             ErrorKind::Errno(err) => err,
             ErrorKind::Utf8(err) => err,
+            ErrorKind::ParseInt(err) => err,
 
             _ => return None,
         })
@@ -122,8 +124,28 @@ impl From<clap::Error> for Error {
 }
 
 impl From<std::num::ParseIntError> for Error {
-    fn from(value: ParseIntError) -> Self {
-        todo!()
+    fn from(value: std::num::ParseIntError) -> Self {
+        Self {
+            exit_code: None,
+            context: String::new(),
+            kind: ErrorKind::ParseInt(value),
+        }
+    }
+}
+
+impl From<String> for Error {
+    fn from(context: String) -> Self {
+        Self {
+            exit_code: None,
+            context,
+            kind: ErrorKind::None,
+        }
+    }
+}
+
+impl From<&str> for Error {
+    fn from(context: &str) -> Self {
+        context.to_owned().into()
     }
 }
 

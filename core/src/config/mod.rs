@@ -1,6 +1,9 @@
 mod make;
-pub use make::{Arch, Make};
+pub use make::{Arch, KConfig, Make};
+mod ktest;
 mod qemu;
+pub use ktest::KTest;
+
 pub use qemu::{Qemu, QemuConfig};
 
 use crate::Result;
@@ -13,8 +16,12 @@ use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    pub qemu: qemu::Qemu,
-    pub make: make::Make,
+    #[serde(default)]
+    pub qemu: Qemu,
+    #[serde(default)]
+    pub make: Make,
+    #[serde(default)]
+    pub ktest: KTest,
 }
 
 impl Config {

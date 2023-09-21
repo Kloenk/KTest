@@ -4,12 +4,10 @@ use tracing::trace;
 mod boot;
 mod build;
 mod commands;
-mod config;
-mod err;
 mod kconfig;
 mod make;
 
-pub use err::{Context, Error, Result};
+pub use ktest_core::{config, Context, Error, Result};
 
 pub fn main() {
     let config = config::Config::new().expect("Failed to read config");

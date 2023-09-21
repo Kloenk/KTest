@@ -2,7 +2,7 @@ use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Error, FromArgMatc
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Qemu {
     pub path_override: Option<String>,
     pub extra_args: Vec<String>,

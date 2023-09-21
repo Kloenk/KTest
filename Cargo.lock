@@ -475,12 +475,36 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "clio",
- "config",
  "jobserver",
+ "ktest-core",
+ "ktest-runner",
  "nix",
  "procfs",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "ktest-core"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "config",
+ "nix",
  "serde",
  "serde_derive",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "ktest-runner"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "clio",
+ "ktest-core",
+ "log",
  "tracing",
  "tracing-subscriber",
 ]

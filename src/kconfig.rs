@@ -1,8 +1,10 @@
 use crate::config::Config;
 use crate::make::MakeCmd;
 use crate::{Error, Result};
+use ktest_core::config::KConfig;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::str::FromStr;
 use tracing::*;
 
 #[instrument(level = "trace", skip(config), fields(make = config.make.path.as_str()))]
@@ -30,15 +32,15 @@ where
         // TODO: replace all with n
     }
 
-    for (key, val) in &config.make.kconfig {
-        set_config(config, &config_file, key, val)?;
+    for cfg in config.make.kconfig.values() {
+        set_config(config, &config_file, cfg)?;
     }
 
     Ok(config_file)
 }
 
 #[instrument(level = "debug", skip(config))]
-pub fn set_config(config: &Config, file: &Path, key: &str, value: &str) -> Result {
+pub fn set_config(config: &Config, file: &Path, cfg: &KConfig) -> Result {
     let mut ktool = PathBuf::from(&config.make.kernel_dir);
     ktool.push("scripts");
     ktool.push("config");
@@ -48,8 +50,8 @@ pub fn set_config(config: &Config, file: &Path, key: &str, value: &str) -> Resul
         .arg("--file")
         .arg(file)
         .arg("--set-val")
-        .arg(key)
-        .arg(value)
+        .arg(&cfg.key)
+        .arg(cfg.value.as_deref().unwrap_or("y"))
         .status()?;
     // TODO: propagate error?
     trace!("config status status: {}", status);
@@ -58,15 +60,15 @@ pub fn set_config(config: &Config, file: &Path, key: &str, value: &str) -> Resul
 }
 
 pub fn check_configs(config: &Config, file: &Path) -> Result {
-    for (key, val) in &config.make.kconfig {
-        check_config(config, file, key, val)?;
+    for cfg in config.make.kconfig.values() {
+        check_config(config, file, cfg)?;
     }
     info!("validated config");
     Ok(())
 }
 
 #[instrument(level = "debug", skip(config))]
-pub fn check_config(config: &Config, file: &Path, key: &str, value: &str) -> Result {
+pub fn check_config(config: &Config, file: &Path, cfg: &KConfig) -> Result {
     let mut ktool = PathBuf::from(&config.make.kernel_dir);
     ktool.push("scripts");
     ktool.push("config");
@@ -75,7 +77,7 @@ pub fn check_config(config: &Config, file: &Path, key: &str, value: &str) -> Res
         .arg("--file")
         .arg(file)
         .arg("-s")
-        .arg(key)
+        .arg(&cfg.key)
         .output()?;
 
     if !out.status.success() {
@@ -86,21 +88,15 @@ pub fn check_config(config: &Config, file: &Path, key: &str, value: &str) -> Res
     let c = core::str::from_utf8(&out.stdout)?;
     let c = if c == "undef" { "n" } else { c }.trim();
 
-    if c != value {
-        return Err(
-            Error::new(format!("Config mismatch: `{key}`: `{c}` != `{value}`"))
-                .set_exit_code(Some(1)),
-        );
+    if c != cfg.value.as_deref().unwrap_or("y") {
+        return Err(Error::new(format!(
+            "Config mismatch: `{key}`: `{c}` != `{value}`",
+            key = cfg.key,
+            c = c,
+            value = cfg.value.as_deref().unwrap_or("y")
+        ))
+        .set_exit_code(Some(1)));
     }
 
     Ok(())
-}
-
-pub fn parse(str: &str) -> Result<(String, String)> {
-    let parts = str.split("=").collect::<Vec<_>>();
-    match parts.len() {
-        1 => Ok((parts[0].to_string(), "y".to_string())),
-        2 => Ok((parts[0].to_string(), parts[1].to_string())),
-        _ => Err(Error::new(format!("Invalid config option: {}", str))),
-    }
 }

@@ -27,7 +27,7 @@ pub fn command(config: &Config) -> clap::Command {
         .arg(
             clap::Arg::new("test")
                 .required(true)
-                .value_parser(clap::value_parser!(std::ffi::OsString))
+                .value_parser(clap::value_parser!(String))
                 .value_hint(clap::ValueHint::ExecutablePath)
                 .index(1),
         );
@@ -38,11 +38,13 @@ pub fn command(config: &Config) -> clap::Command {
 pub fn run(config: &mut Config, matches: &clap::ArgMatches) -> Result {
     config.qemu.update_from_arg_matches(matches)?;
 
-    let test = matches.get_one::<std::ffi::OsString>("test").unwrap();
-    crate::boot::update_config_for_test(config, test)?;
+    let test = matches.get_one::<String>("test").unwrap();
+    let deps = ktest_runner::Deps::get(config, test)?;
+    deps.merge_into_config(config);
 
     if matches.get_flag("parse-only") {
-        println!("{config:#?}");
+        trace!("config: {config:#?}");
+        deps.print_shell();
         return Ok(());
     }
 

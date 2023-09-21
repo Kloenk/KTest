@@ -1,0 +1,18 @@
+[package]
+name = "ktest-core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+config = { version = "0.13", features = [ "toml" ] }
+serde = "1.0"
+serde_derive = "1.0"
+
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+
+nix = { version = "0.27.1", features = ["feature"] }
+# Error types
+clap = { version = "4.3" }

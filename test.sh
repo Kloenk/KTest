@@ -4,4 +4,6 @@
 
 config-arch $(uname -m)
 
+require-kernel-config FOO=m
+
 main "$@"

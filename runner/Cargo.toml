@@ -1,28 +1,16 @@
 [package]
-name = "ktest"
+name = "ktest-runner"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[workspace]
-members = [
-    ".",
-    "runner",
-    "core"
-]
-
 
 [dependencies]
-ktest-core = { path = "./core" }
-ktest-runner = { path = "./runner" }
+ktest-core = { path = "../core" }
 
 clap = { version = "4.3", features = [ "cargo", "string" ] }
 clio = { version = "0.3", features = [ "clap-parse" ] }
 
-jobserver = { version = "0.1" }
 tracing = "0.1.37"
-nix = { version = "0.27.1", features = ["feature"] }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-procfs = "0.15.1"
+log = "0.4.20"

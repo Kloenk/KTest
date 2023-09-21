@@ -6,7 +6,8 @@ use clap::{
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use tracing::trace;
+use std::str::FromStr;
+use tracing::*;
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq, Hash)]
 #[serde(try_from = "String")]
@@ -105,7 +106,7 @@ impl ValueEnum for Arch {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Make {
     pub path: String,
     pub jobs: Option<usize>,
@@ -113,7 +114,8 @@ pub struct Make {
     pub out_dir: String,
     pub kernel_dir: String,
     pub extra_make_args: Vec<String>,
-    pub kconfig: HashMap<String, String>,
+    #[serde(deserialize_with = "deserialize_hashmap_config")]
+    pub kconfig: HashMap<String, KConfig>,
 }
 
 impl Make {
@@ -292,9 +294,10 @@ impl FromArgMatches for Make {
             .unwrap_or_default()
         {
             // TODO: proper error handling
-            let (key, value) = crate::kconfig::parse(arg).expect("Invalid kconfig argument");
+            /*let (key, value) = crate::kconfig::parse(arg).expect("Invalid kconfig argument");
             trace!("inserting cmd line kconfig: {}={}", key, value);
-            self.kconfig.insert(key, value);
+            self.kconfig.insert(key, value);*/
+            todo!()
         }
 
         Ok(())
@@ -327,4 +330,55 @@ fn get_arch() -> Result<Arch> {
         .to_str()
         .context("Failed to get machine arch name")?
         .parse()
+}
+
+#[derive(Debug, Clone)]
+pub struct KConfig {
+    pub key: String,
+    pub value: Option<String>,
+}
+
+impl core::fmt::Display for KConfig {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match &self.value {
+            Some(value) => write!(f, "{}={}", self.key, value),
+            None => write!(f, "{}", self.key),
+        }
+    }
+}
+
+impl FromStr for KConfig {
+    type Err = Error;
+
+    fn from_str(str: &str) -> Result<Self, Self::Err> {
+        let parts = str.split("=").collect::<Vec<_>>();
+        Ok(match parts.len() {
+            1 => Self {
+                key: parts[0].to_string(),
+                value: None,
+            },
+            2 => Self {
+                key: parts[0].to_string(),
+                value: Some(parts[1].to_string()),
+            },
+            _ => return Err(Error::new(format!("Invalid config option: {}", str))),
+        })
+    }
+}
+
+fn deserialize_hashmap_config<'de, D>(d: D) -> Result<HashMap<String, KConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    let options = Vec::<String>::deserialize(d)?;
+    let mut out = HashMap::new();
+
+    for option in options {
+        let option = KConfig::from_str(&option).map_err(serde::de::Error::custom)?; // TODO: proper error handling
+        trace!(kconfig = option.to_string(), "inserting config");
+        out.insert(option.key.clone(), option);
+    }
+
+    Ok(out)
 }
